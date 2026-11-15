@@ -313,7 +313,7 @@
     function loadData() {
       google.script.run
         .withSuccessHandler(renderDashboard)
-        .withFailureHandler(err => console.error(err.message))
+        .withFailureHandler(err => alert('Load Error: ' + err.message))
         .getDashboardData();
     }
 
@@ -356,7 +356,8 @@
         .withFailureHandler(err => {
           btn.disabled = false;
           btn.textContent = 'Submit Transaction';
-          status.textContent = err.message;
+          alert('Save Error: ' + err.message);
+          status.textContent = 'Failed to save.';
           status.className = 'text-xs text-center font-medium text-rose-600 mt-2';
           status.classList.remove('hidden');
         })
