@@ -1,0 +1,282 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Daily Cash Flow Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+  <div class="max-w-6xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Daily Finance &amp; Cash Flow</h1>
+        <p class="text-sm text-slate-500">Track Modal inflows and daily Ops / Transportasi expenses</p>
+      </div>
+      <button onclick="loadData()" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 transition shadow-sm self-start">
+        ↻ Refresh Data
+      </button>
+    </div>
+
+    <!-- Cash Flow Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Net Cash Flow (Balance)</p>
+        <p id="netCashFlow" class="text-3xl font-bold text-slate-900 mt-2">Rp 0</p>
+      </div>
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wider text-emerald-600">Total Modal (Inflow)</p>
+        <p id="totalModal" class="text-3xl font-bold text-emerald-600 mt-2">Rp 0</p>
+      </div>
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wider text-rose-600">Total Expense (Outflow)</p>
+        <p id="totalExpense" class="text-3xl font-bold text-rose-600 mt-2">Rp 0</p>
+        <div class="flex items-center gap-4 mt-2 text-xs text-slate-600">
+          <span>Ops: <strong id="totalOps">Rp 0</strong></span>
+          <span>•</span>
+          <span>Transportasi: <strong id="totalTransportasi">Rp 0</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form + Table -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div class="lg:col-span-5">
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <h2 class="text-lg font-semibold text-slate-900 mb-4">New Transaction</h2>
+          <form id="txForm" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Transaction Type</label>
+              <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                <button type="button" id="btnExpense" onclick="setType('Expense')" class="py-2 text-sm font-semibold rounded-lg bg-white text-rose-600 shadow-sm transition">Expense</button>
+                <button type="button" id="btnModal" onclick="setType('Modal')" class="py-2 text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition">Modal</button>
+              </div>
+              <input type="hidden" id="txType" value="Expense" />
+            </div>
+
+            <div id="categoryGroup">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Expense Category</label>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="cursor-pointer">
+                  <input type="radio" name="expenseCat" value="Ops" checked class="peer sr-only" />
+                  <div class="text-center py-2.5 px-3 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white transition">Ops</div>
+                </label>
+                <label class="cursor-pointer">
+                  <input type="radio" name="expenseCat" value="Transportasi" class="peer sr-only" />
+                  <div class="text-center py-2.5 px-3 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white transition">Transportasi</div>
+                </label>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="txDate" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Date</label>
+                <input type="date" id="txDate" required class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+              </div>
+              <div>
+                <label for="txAmount" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Amount (Rp)</label>
+                <input type="number" id="txAmount" min="1" step="any" placeholder="50000" required class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+              </div>
+            </div>
+
+            <div>
+              <label for="txDesc" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Description</label>
+              <input type="text" id="txDesc" placeholder="e.g., Grab to venue / Printing supplies" required class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="txPhoto" class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Photo Proof</label>
+                <span class="text-xs text-slate-400">Optional</span>
+              </div>
+              <input type="file" id="txPhoto" accept="image/*" onchange="previewPhoto(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
+              <div id="previewContainer" class="hidden mt-3 relative">
+                <img id="photoPreview" class="h-28 w-full object-cover rounded-xl border border-slate-200" />
+                <button type="button" onclick="clearPhoto()" class="absolute top-2 right-2 bg-slate-900/75 text-white text-xs px-2.5 py-1 rounded-lg hover:bg-slate-900">Remove</button>
+              </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl transition shadow-sm disabled:opacity-50">Save Transaction</button>
+            <p id="statusMsg" class="text-xs text-center font-medium hidden"></p>
+          </form>
+        </div>
+      </div>
+
+      <div class="lg:col-span-7">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-slate-900">Recent Transactions</h2>
+            <span id="txCount" class="text-xs font-medium text-slate-400">0 entries</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50/75 text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                  <th class="py-3 px-5">Date</th>
+                  <th class="py-3 px-4">Category</th>
+                  <th class="py-3 px-4">Description</th>
+                  <th class="py-3 px-4 text-right">Amount</th>
+                  <th class="py-3 px-5 text-center">Proof</th>
+                </tr>
+              </thead>
+              <tbody id="txTableBody" class="divide-y divide-slate-100 text-sm">
+                <tr><td colspan="5" class="py-10 text-center text-slate-400">Loading transactions...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL BELOW:
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbw2O5qzBHvlmb0qDelICqV7an9HSB4zIBRdfYuphqi54crTxzsUGS1wfz7Z3lrlIO1j/exec';
+
+    let selectedFile = null;
+    document.getElementById('txDate').valueAsDate = new Date();
+
+    function formatIDR(num) {
+      return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+    }
+
+    function setType(type) {
+      document.getElementById('txType').value = type;
+      const btnExpense = document.getElementById('btnExpense');
+      const btnModal = document.getElementById('btnModal');
+      const categoryGroup = document.getElementById('categoryGroup');
+
+      if (type === 'Expense') {
+        btnExpense.className = 'py-2 text-sm font-semibold rounded-lg bg-white text-rose-600 shadow-sm transition';
+        btnModal.className = 'py-2 text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition';
+        categoryGroup.classList.remove('hidden');
+      } else {
+        btnModal.className = 'py-2 text-sm font-semibold rounded-lg bg-white text-emerald-600 shadow-sm transition';
+        btnExpense.className = 'py-2 text-sm font-semibold rounded-lg text-slate-600 hover:text-slate-900 transition';
+        categoryGroup.classList.add('hidden');
+      }
+    }
+
+    function previewPhoto(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64Full = e.target.result;
+        selectedFile = {
+          fileName: file.name,
+          mimeType: file.type,
+          fileData: base64Full.split(',')[1]
+        };
+        document.getElementById('photoPreview').src = base64Full;
+        document.getElementById('previewContainer').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearPhoto() {
+      selectedFile = null;
+      document.getElementById('txPhoto').value = '';
+      document.getElementById('previewContainer').classList.add('hidden');
+    }
+
+    function renderDashboard(data) {
+      const { summary, transactions } = data;
+      const netEl = document.getElementById('netCashFlow');
+      netEl.textContent = formatIDR(summary.netCashFlow);
+      netEl.className = summary.netCashFlow >= 0 ? 'text-3xl font-bold text-slate-900 mt-2' : 'text-3xl font-bold text-rose-600 mt-2';
+
+      document.getElementById('totalModal').textContent = formatIDR(summary.totalModal);
+      document.getElementById('totalExpense').textContent = formatIDR(summary.totalExpense);
+      document.getElementById('totalOps').textContent = formatIDR(summary.totalOps);
+      document.getElementById('totalTransportasi').textContent = formatIDR(summary.totalTransportasi);
+      document.getElementById('txCount').textContent = `${transactions.length} entries`;
+
+      const tbody = document.getElementById('txTableBody');
+      if (transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-slate-400">No transactions recorded yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = transactions.map(tx => {
+        const isModal = tx.type === 'Modal';
+        const badgeClass = isModal ? 'bg-emerald-50 text-emerald-700' : (tx.category === 'Ops' ? 'bg-amber-50 text-amber-700' : 'bg-sky-50 text-sky-700');
+        const amountClass = isModal ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
+        const amountPrefix = isModal ? '+' : '-';
+        const proofCell = tx.proofUrl ? `<a href="${tx.proofUrl}" target="_blank" class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">View</a>` : `<span class="text-slate-300 text-xs">—</span>`;
+
+        return `
+          <tr class="hover:bg-slate-50/75 transition">
+            <td class="py-3.5 px-5 text-slate-500 whitespace-nowrap">${tx.date}</td>
+            <td class="py-3.5 px-4 whitespace-nowrap"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${tx.category}</span></td>
+            <td class="py-3.5 px-4 text-slate-800">${tx.description}</td>
+            <td class="py-3.5 px-4 text-right whitespace-nowrap ${amountClass}">${amountPrefix}${formatIDR(tx.amount)}</td>
+            <td class="py-3.5 px-5 text-center whitespace-nowrap">${proofCell}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function loadData() {
+      fetch(WEB_APP_URL)
+        .then(res => res.json())
+        .then(data => renderDashboard(data))
+        .catch(err => alert('Failed to load data: ' + err.message));
+    }
+
+    document.getElementById('txForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const status = document.getElementById('statusMsg');
+
+      const type = document.getElementById('txType').value;
+      const category = type === 'Modal' ? 'Modal' : document.querySelector('input[name="expenseCat"]:checked').value;
+
+      const payload = {
+        date: document.getElementById('txDate').value,
+        type: type,
+        category: category,
+        amount: document.getElementById('txAmount').value,
+        description: document.getElementById('txDesc').value.trim(),
+        fileData: selectedFile ? selectedFile.fileData : null,
+        fileName: selectedFile ? selectedFile.fileName : null,
+        mimeType: selectedFile ? selectedFile.mimeType : null
+      };
+
+      btn.disabled = true;
+      btn.textContent = selectedFile ? 'Uploading Proof & Saving...' : 'Saving...';
+      status.classList.add('hidden');
+
+      fetch(WEB_APP_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(response => {
+        if (response.success) {
+          renderDashboard(response.data);
+          document.getElementById('txAmount').value = '';
+          document.getElementById('txDesc').value = '';
+          clearPhoto();
+          btn.disabled = false;
+          btn.textContent = 'Save Transaction';
+          status.textContent = 'Transaction saved!';
+          status.className = 'text-xs text-center font-medium text-emerald-600 mt-2';
+          status.classList.remove('hidden');
+          setTimeout(() => status.classList.add('hidden'), 3000);
+        } else {
+          throw new Error(response.error);
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.textContent = 'Save Transaction';
+        status.textContent = err.message;
+        status.className = 'text-xs text-center font-medium text-rose-600 mt-2';
+        status.classList.remove('hidden');
+      });
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
