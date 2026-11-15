@@ -108,9 +108,9 @@
         </div>
       </div>
 
-      <!-- Admin Restricted Section: Recent Transactions Table -->
+      <!-- Admin Restricted Section: Recent Transactions Table with Pagination -->
       <div id="adminTableSection" class="hidden lg:col-span-7">
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-slate-900">Recent Transactions History</h2>
             <span id="txCount" class="text-xs font-medium text-slate-400">0 entries</span>
@@ -130,6 +130,20 @@
                 <tr><td colspan="5" class="py-10 text-center text-slate-400">Syncing with Google Sheets...</td></tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination Footer -->
+          <div id="paginationBar" class="hidden px-5 py-3.5 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between gap-2">
+            <span id="pageRangeInfo" class="text-xs text-slate-500">Showing 1–10 of 0</span>
+            <div class="flex items-center gap-2">
+              <button type="button" id="prevPageBtn" onclick="changePage(-1)" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition cursor-pointer">
+                ← Prev
+              </button>
+              <span id="pageIndicator" class="text-xs font-semibold text-slate-600 px-1">1 / 1</span>
+              <button type="button" id="nextPageBtn" onclick="changePage(1)" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition cursor-pointer">
+                Next →
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -170,10 +184,12 @@
   <script>
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwkXgJgj10XYPC0UWVt8e_7-iBhEiI0P-f_3pun44BVZtRz8Fk9MAyez7Wcm9PPkxT-/exec';
     const isInsideAppsScript = typeof google !== 'undefined' && google.script && google.script.run;
+    const ITEMS_PER_PAGE = 10;
 
     let selectedFile = null;
     let isAdmin = localStorage.getItem('akn_is_admin') === 'true';
     let cachedData = null;
+    let currentPage = 1;
 
     try {
       const savedCache = localStorage.getItem('akn_cached_data');
@@ -186,7 +202,6 @@
       return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
     }
 
-    // Fallback formatter in case raw Date string is ever returned
     function formatCompactDate(dateVal, timeVal) {
       if (!dateVal) return { date: '—', time: '' };
       let cleanDate = String(dateVal);
@@ -216,7 +231,6 @@
       }
     }
 
-    // Compress camera/gallery images automatically so mobile uploads are fast and reliable
     function previewPhoto(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -301,6 +315,7 @@
 
       if (user === 'AKN Admin' && pass === 'Agus88') {
         isAdmin = true;
+        currentPage = 1;
         localStorage.setItem('akn_is_admin', 'true');
         closeAuthModal();
         updateViewMode();
@@ -339,33 +354,37 @@
       }
     }
 
-    function renderDashboard(data) {
-      if (!data || !data.summary) return;
-      cachedData = data;
-      try {
-        localStorage.setItem('akn_cached_data', JSON.stringify(data));
-      } catch (e) {}
+    function changePage(delta) {
+      if (!cachedData || !cachedData.transactions) return;
+      const totalPages = Math.max(1, Math.ceil(cachedData.transactions.length / ITEMS_PER_PAGE));
+      const next = currentPage + delta;
+      if (next >= 1 && next <= totalPages) {
+        currentPage = next;
+        renderTablePage();
+      }
+    }
 
-      if (!isAdmin) return;
-
-      const { summary, transactions } = data;
-      const netEl = document.getElementById('netCashFlow');
-      netEl.textContent = formatIDR(summary.netCashFlow);
-      netEl.className = summary.netCashFlow >= 0 ? 'text-3xl font-bold text-slate-900 mt-2' : 'text-3xl font-bold text-rose-600 mt-2';
-
-      document.getElementById('totalModal').textContent = formatIDR(summary.totalModal);
-      document.getElementById('totalExpense').textContent = formatIDR(summary.totalExpense);
-      document.getElementById('totalOps').textContent = formatIDR(summary.totalOps);
-      document.getElementById('totalTransportasi').textContent = formatIDR(summary.totalTransportasi);
-      document.getElementById('txCount').textContent = `${transactions.length} entries`;
-
+    function renderTablePage() {
+      const transactions = (cachedData && cachedData.transactions) ? cachedData.transactions : [];
       const tbody = document.getElementById('txTableBody');
+      const paginationBar = document.getElementById('paginationBar');
+
       if (transactions.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-slate-400">No transactions recorded yet.</td></tr>';
+        paginationBar.classList.add('hidden');
         return;
       }
 
-      tbody.innerHTML = transactions.map(tx => {
+      const totalItems = transactions.length;
+      const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
+      const pageItems = transactions.slice(startIndex, endIndex);
+
+      tbody.innerHTML = pageItems.map(tx => {
         const isModal = tx.type === 'Modal';
         const badgeClass = isModal ? 'bg-emerald-50 text-emerald-700' : (tx.category === 'Ops' ? 'bg-amber-50 text-amber-700' : 'bg-sky-50 text-sky-700');
         const amountClass = isModal ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
@@ -391,18 +410,49 @@
           </tr>
         `;
       }).join('');
+
+      paginationBar.classList.remove('hidden');
+      document.getElementById('pageRangeInfo').textContent = `Showing ${startIndex + 1}–${endIndex} of ${totalItems}`;
+      document.getElementById('pageIndicator').textContent = `${currentPage} / ${totalPages}`;
+      document.getElementById('prevPageBtn').disabled = currentPage === 1;
+      document.getElementById('nextPageBtn').disabled = currentPage === totalPages;
+    }
+
+    function renderDashboard(data, resetPage = false) {
+      if (!data || !data.summary) return;
+      cachedData = data;
+      if (resetPage) currentPage = 1;
+
+      try {
+        localStorage.setItem('akn_cached_data', JSON.stringify(data));
+      } catch (e) {}
+
+      if (!isAdmin) return;
+
+      const { summary, transactions } = data;
+      const netEl = document.getElementById('netCashFlow');
+      netEl.textContent = formatIDR(summary.netCashFlow);
+      netEl.className = summary.netCashFlow >= 0 ? 'text-3xl font-bold text-slate-900 mt-2' : 'text-3xl font-bold text-rose-600 mt-2';
+
+      document.getElementById('totalModal').textContent = formatIDR(summary.totalModal);
+      document.getElementById('totalExpense').textContent = formatIDR(summary.totalExpense);
+      document.getElementById('totalOps').textContent = formatIDR(summary.totalOps);
+      document.getElementById('totalTransportasi').textContent = formatIDR(summary.totalTransportasi);
+      document.getElementById('txCount').textContent = `${transactions.length} entries`;
+
+      renderTablePage();
     }
 
     function loadData() {
       if (isInsideAppsScript) {
         google.script.run
-          .withSuccessHandler(renderDashboard)
+          .withSuccessHandler(data => renderDashboard(data, false))
           .withFailureHandler(err => console.error('Load Error:', err.message))
           .getDashboardData();
       } else {
         fetch(`${WEB_APP_URL}?action=getData`)
           .then(res => res.json())
-          .then(data => renderDashboard(data))
+          .then(data => renderDashboard(data, false))
           .catch(err => console.error('Fetch Error:', err.message));
       }
     }
@@ -431,7 +481,7 @@
       status.classList.add('hidden');
 
       const onSuccess = (updatedData) => {
-        renderDashboard(updatedData);
+        renderDashboard(updatedData, true);
         document.getElementById('txAmount').value = '';
         document.getElementById('txDesc').value = '';
         clearPhoto();
