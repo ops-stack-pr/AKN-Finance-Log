@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -94,7 +93,7 @@
             <div>
               <div class="flex items-center justify-between mb-1.5">
                 <label for="txPhoto" class="block text-xs font-semibold uppercase tracking-wider text-slate-500">Photo Proof</label>
-                <span class="text-xs text-slate-400">Optional</span>
+                <span class="text-xs text-slate-400">Optional (Camera or File)</span>
               </div>
               <input type="file" id="txPhoto" accept="image/*" onchange="previewPhoto(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer" />
               <div id="previewContainer" class="hidden mt-3 relative">
@@ -112,22 +111,22 @@
       <!-- Admin Restricted Section: Recent Transactions Table -->
       <div id="adminTableSection" class="hidden lg:col-span-7">
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-slate-900">Recent Transactions History</h2>
             <span id="txCount" class="text-xs font-medium text-slate-400">0 entries</span>
           </div>
-          <div class="overflow-x-auto">
+          <div class="w-full">
             <table class="w-full text-left border-collapse">
               <thead>
-                <tr class="bg-slate-50/75 text-xs font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                  <th class="py-3 px-5">Date</th>
-                  <th class="py-3 px-4">Category</th>
-                  <th class="py-3 px-4">Description</th>
-                  <th class="py-3 px-4 text-right">Amount</th>
-                  <th class="py-3 px-5 text-center">Proof</th>
+                <tr class="bg-slate-50/75 text-[11px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                  <th class="py-3 pl-4 pr-2">Date</th>
+                  <th class="py-3 px-2">Type</th>
+                  <th class="py-3 px-2">Description</th>
+                  <th class="py-3 px-2 text-right">Amount</th>
+                  <th class="py-3 pl-2 pr-4 text-center">Proof</th>
                 </tr>
               </thead>
-              <tbody id="txTableBody" class="divide-y divide-slate-100 text-sm">
+              <tbody id="txTableBody" class="divide-y divide-slate-100 text-xs sm:text-sm">
                 <tr><td colspan="5" class="py-10 text-center text-slate-400">Syncing with Google Sheets...</td></tr>
               </tbody>
             </table>
@@ -176,7 +175,6 @@
     let isAdmin = localStorage.getItem('akn_is_admin') === 'true';
     let cachedData = null;
 
-    // Load cached snapshot immediately so numbers never flash Rp 0 on refresh
     try {
       const savedCache = localStorage.getItem('akn_cached_data');
       if (savedCache) cachedData = JSON.parse(savedCache);
@@ -186,6 +184,19 @@
 
     function formatIDR(num) {
       return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+    }
+
+    // Fallback formatter in case raw Date string is ever returned
+    function formatCompactDate(dateVal, timeVal) {
+      if (!dateVal) return { date: '—', time: '' };
+      let cleanDate = String(dateVal);
+      if (cleanDate.includes('GMT') || cleanDate.includes('00:00:00')) {
+        const d = new Date(cleanDate);
+        if (!isNaN(d)) {
+          cleanDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+      }
+      return { date: cleanDate, time: timeVal || '' };
     }
 
     function setType(type) {
@@ -205,19 +216,43 @@
       }
     }
 
+    // Compress camera/gallery images automatically so mobile uploads are fast and reliable
     function previewPhoto(event) {
       const file = event.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = function(e) {
-        const base64Full = e.target.result;
-        selectedFile = {
-          fileName: file.name,
-          mimeType: file.type,
-          fileData: base64Full.split(',')[1]
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1280;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          const cleanName = (file.name || 'camera_proof.jpg').replace(/\.[^/.]+$/, '') + '.jpg';
+
+          selectedFile = {
+            fileName: cleanName,
+            mimeType: 'image/jpeg',
+            fileData: compressedDataUrl.split(',')[1]
+          };
+
+          document.getElementById('photoPreview').src = compressedDataUrl;
+          document.getElementById('previewContainer').classList.remove('hidden');
         };
-        document.getElementById('photoPreview').src = base64Full;
-        document.getElementById('previewContainer').classList.remove('hidden');
+        img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     }
@@ -335,15 +370,24 @@
         const badgeClass = isModal ? 'bg-emerald-50 text-emerald-700' : (tx.category === 'Ops' ? 'bg-amber-50 text-amber-700' : 'bg-sky-50 text-sky-700');
         const amountClass = isModal ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
         const amountPrefix = isModal ? '+' : '-';
-        const proofCell = tx.proofUrl ? `<a href="${tx.proofUrl}" target="_blank" class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">View</a>` : `<span class="text-slate-300 text-xs">—</span>`;
+        const { date, time } = formatCompactDate(tx.date, tx.time);
+
+        const proofCell = tx.proofUrl
+          ? `<a href="${tx.proofUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">View</a>`
+          : `<span class="text-slate-300 text-xs">—</span>`;
 
         return `
           <tr class="hover:bg-slate-50/75 transition">
-            <td class="py-3.5 px-5 text-slate-500 whitespace-nowrap">${tx.date}</td>
-            <td class="py-3.5 px-4 whitespace-nowrap"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass}">${tx.category}</span></td>
-            <td class="py-3.5 px-4 text-slate-800">${tx.description}</td>
-            <td class="py-3.5 px-4 text-right whitespace-nowrap ${amountClass}">${amountPrefix}${formatIDR(tx.amount)}</td>
-            <td class="py-3.5 px-5 text-center whitespace-nowrap">${proofCell}</td>
+            <td class="py-3 pl-4 pr-2 whitespace-nowrap align-top">
+              <div class="text-xs font-medium text-slate-700">${date}</div>
+              ${time ? `<div class="text-[11px] text-slate-400">${time}</div>` : ''}
+            </td>
+            <td class="py-3 px-2 whitespace-nowrap align-top">
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold ${badgeClass}">${tx.category}</span>
+            </td>
+            <td class="py-3 px-2 text-slate-800 text-xs sm:text-sm break-words align-top">${tx.description}</td>
+            <td class="py-3 px-2 text-right whitespace-nowrap text-xs sm:text-sm align-top ${amountClass}">${amountPrefix}${formatIDR(tx.amount)}</td>
+            <td class="py-3 pl-2 pr-4 text-center whitespace-nowrap align-top">${proofCell}</td>
           </tr>
         `;
       }).join('');
@@ -430,7 +474,6 @@
       }
     });
 
-    // Initialize view state and fetch latest data from Google Sheets
     updateViewMode();
     loadData();
   </script>
