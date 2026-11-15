@@ -2,26 +2,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Adikarya Kreasi Nusantara Daily Cash Flow Portal</title>
+  <title>Adikarya Kreasi Nusantara - Daily Finance & Cash Flow</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
-  <div class="max-w-6xl mx-auto px-4 py-8">
-    <!-- Header -->
-    <body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
-  <div class="max-w-6xl mx-auto px-4 py-8">
-    <!-- Top Center Mini Logo -->
-    <div class="flex justify-center mb-5">
-      <img src="./AKN%20logo.png" alt="AKN Logo" class="h-11 w-auto object-contain" />
-    </div>
-
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Adikarya Kreasi Nusantara - Daily Finance &amp; Cash Flow</h1>
-        <p id="portalSubtitle" class="text-sm text-slate-500">Staff Mode: Submit daily transaction &amp; receipt proof</p>
+  <div class="max-w-6xl mx-auto px-4 py-6 sm:py-8">
+    
+    <!-- Top Bar: Logo + Title/Subtitle + Admin Button on Same Level -->
+    <header class="bg-white rounded-2xl px-5 py-4 border border-slate-200 shadow-sm mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-3.5 sm:gap-4">
+        <img src="./AKN%20logo.png" alt="PT. Adikarya Kreasi Nusantara" class="h-11 sm:h-12 w-auto object-contain shrink-0" />
+        <div class="h-9 w-px bg-slate-200 hidden sm:block"></div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 leading-snug">Adikarya Kreasi Nusantara - Daily Finance &amp; Cash Flow</h1>
+          <p id="portalSubtitle" class="text-xs sm:text-sm text-slate-500">Staff Mode: Submit daily transaction &amp; receipt proof</p>
+        </div>
       </div>
-      ...
+
+      <div class="flex items-center gap-2.5 self-end md:self-auto shrink-0">
+        <button type="button" id="refreshBtn" onclick="loadData()" class="hidden inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-100 transition cursor-pointer">
+          ↻ Sync
+        </button>
+        <button type="button" id="authBtn" onclick="handleAuthClick()" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition shadow-sm cursor-pointer">
+          🔒 Admin Login
+        </button>
+      </div>
+    </header>
 
     <!-- Admin Restricted Section: Summary Cards -->
     <div id="adminSummarySection" class="hidden grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
@@ -336,7 +342,7 @@
 
       if (isAdmin) {
         authBtn.textContent = '🔓 Logout Admin';
-        authBtn.className = 'inline-flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-sm font-medium hover:bg-rose-100 transition shadow-sm cursor-pointer';
+        authBtn.className = 'inline-flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-sm font-medium hover:bg-rose-100 transition cursor-pointer';
         refreshBtn.classList.remove('hidden');
         subtitle.textContent = 'Admin Mode: Full cash flow visibility & transaction history';
         summarySec.classList.remove('hidden');
@@ -345,7 +351,7 @@
         if (cachedData) renderDashboard(cachedData);
       } else {
         authBtn.textContent = '🔒 Admin Login';
-        authBtn.className = 'inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition shadow-sm cursor-pointer';
+        authBtn.className = 'inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition shadow-sm cursor-pointer';
         refreshBtn.classList.add('hidden');
         subtitle.textContent = 'Staff Mode: Submit daily transaction & receipt proof';
         summarySec.classList.add('hidden');
